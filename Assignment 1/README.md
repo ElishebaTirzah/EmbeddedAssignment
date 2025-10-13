@@ -34,6 +34,6 @@ Behavior notes:
 
 #### Assignment 1 Preview
 
-![Embedded Assignment Overview](Assignment%201/EmbeddedAssignment.jpeg](/Assignment%201/EmbeddedAssignment.jpeg)
+![Embedded Assignment Overview](/Assignment%201/EmbeddedAssignment.jpeg)
 
 
