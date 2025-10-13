@@ -1,30 +1,8 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
-/* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
@@ -186,7 +164,6 @@ void ExampleTask1(void *pV){
             printf("[ERROR]: Sending failed");
         }
         vTaskDelay(pdMS_TO_TICKS(500)); // 500ms delay of sending to queue
-//		taskYIELD();
 		if (counter == 5){
 			counter = 0;
 		}
@@ -226,8 +203,7 @@ void ExampleTask2(void *pV){
 				vTaskDelete(NULL);
 			}
 
-		}
-//		taskYIELD();
+        }
 	}
 }
 /* USER CODE END 4 */
