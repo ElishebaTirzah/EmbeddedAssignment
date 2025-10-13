@@ -34,5 +34,5 @@ Behavior notes:
 
 #### Assignment 1 Preview
 
-![Embedded Assignment Overview](Assignment%201/EmbeddedAssignment.jpeg](https://github.com/ElishebaTirzah/EmbeddedAssignment/blob/master/Assignment%201/EmbeddedAssignment.jpeg)
+![Embedded Assignment Overview](Assignment%201/EmbeddedAssignment.jpeg](/Assignment%201/EmbeddedAssignment.jpeg)
 
