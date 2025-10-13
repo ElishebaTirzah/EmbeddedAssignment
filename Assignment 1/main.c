@@ -1,5 +1,6 @@
 #include "main.h"
 #include <stdio.h>
+#include <inttypes.h>
 #include "FreeRTOS.h"
 #include "task.h"
 #include "queue.h"
@@ -15,7 +16,21 @@ typedef struct {
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define QUEUE_LENGTH            (5U)
+#define PRODUCER_DELAY_MS       (500U)
+#define TASK_STACK_WORDS        (128U)
+#define TASK_PRIORITY           (2U)
+#define PRIORITY_BOOST_DELTA    (2U)
+#define PRIORITY_REDUCE_DELTA   (1U)
 
+#define DATA_ID_DELETE          (0U)
+#define DATA_ID_PROCESS         (1U)
+
+#define DATA_VALUE_BOOST        (0)
+#define DATA_VALUE_REDUCE       (1)
+#define DATA_VALUE_DELETE       (2)
+
+#define COUNTER_MAX_EXCLUSIVE   (5)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -26,8 +41,8 @@ typedef struct {
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-TaskHandle_t TaskHandle_1;
-TaskHandle_t TaskHandle_2;
+static TaskHandle_t TaskHandle_1;
+static TaskHandle_t TaskHandle_2;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -38,10 +53,10 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void ExampleTask1(void *pV);
-void ExampleTask2(void *pV);
-QueueHandle_t Queue1;
-
+static void ExampleTask1(void *pV);
+static void ExampleTask2(void *pV);
+static QueueHandle_t Queue1;
+ 
 /* USER CODE END 0 */
 
 /**
@@ -72,7 +87,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-	Queue1 = xQueueCreate(5, sizeof(Data_t));
+	Queue1 = xQueueCreate(QUEUE_LENGTH, sizeof(Data_t));
 
 	BaseType_t status;
 	if (Queue1 == NULL) {
@@ -83,11 +98,11 @@ int main(void)
 
 //-------------------------------[TASK CREATION]------------------------------------------------
   //Task A creation
-  status = xTaskCreate(ExampleTask1,"Task-1",128,NULL,2,&TaskHandle_1);
+  status = xTaskCreate(ExampleTask1,"Task-1",TASK_STACK_WORDS,NULL,TASK_PRIORITY,&TaskHandle_1);
   configASSERT(status ==pdPASS);
 
   //Task B creation
-  status = xTaskCreate(ExampleTask2,"Task-2",128,NULL,2,&TaskHandle_2);
+  status = xTaskCreate(ExampleTask2,"Task-2",TASK_STACK_WORDS,NULL,TASK_PRIORITY,&TaskHandle_2);
   configASSERT(status ==pdPASS);
 
   //Start of Scheduler
@@ -152,9 +167,9 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void ExampleTask1(void *pV){
-	Data_t myData;
-	int counter = 0;
+static void ExampleTask1(void *pV){
+    Data_t myData;
+    int32_t counter = 0;
 	myData.dataID = 1;
 	while(1){
 		myData.DataValue = counter++;
@@ -163,43 +178,43 @@ void ExampleTask1(void *pV){
         if (xQueueSend(Queue1, &myData, portMAX_DELAY) != pdPASS) {
             printf("[ERROR]: Sending failed");
         }
-        vTaskDelay(pdMS_TO_TICKS(500)); // 500ms delay of sending to queue
-		if (counter == 5){
+        vTaskDelay(pdMS_TO_TICKS(PRODUCER_DELAY_MS));
+        if (counter == COUNTER_MAX_EXCLUSIVE){
 			counter = 0;
 		}
 	}
 }
 
-void ExampleTask2(void *pV){
-	Data_t rxData;
-	UBaseType_t originalPriority = uxTaskPriorityGet(NULL);
-    uint8_t priorityIncreased = 0;
+static void ExampleTask2(void *pV){
+    Data_t rxData;
+    const UBaseType_t originalPriority = uxTaskPriorityGet(NULL);
+    uint8_t priorityIncreased = 0U;
 
 	while(1){
-		if (xQueueReceive(Queue1, &rxData, portMAX_DELAY) ==pdPASS){
-			printf("ID: %d, Data: %ld\n", rxData.dataID, rxData.DataValue);
+        if (xQueueReceive(Queue1, &rxData, portMAX_DELAY) == pdPASS){
+            printf("ID: %" PRIu8 ", Data: %" PRId32 "\n", rxData.dataID, rxData.DataValue);
 		}
-		//Delete Example Task 2
-		if (rxData.dataID == 0){
+        // Delete Example Task 2
+        if (rxData.dataID == DATA_ID_DELETE){
 			vTaskDelete(NULL);
 		}
 
-		//Allow Processing of Data members
-		if (rxData.dataID == 1){
-			//Increase the Priority of Example Task by 2 from the value given at creation
-			if(rxData.DataValue == 0){
-			    vTaskPrioritySet( NULL, originalPriority + 2);
-			    priorityIncreased = 1;
+        // Allow Processing of Data members
+        if (rxData.dataID == DATA_ID_PROCESS){
+            // Increase priority
+            if(rxData.DataValue == DATA_VALUE_BOOST){
+                vTaskPrioritySet(NULL, originalPriority + PRIORITY_BOOST_DELTA);
+                priorityIncreased = 1U;
 			}
-			//Decrease the Priority of Example Task 2 if previously increased
-			else if(rxData.DataValue == 1){
-				if (priorityIncreased){
-					vTaskPrioritySet(NULL, originalPriority -1);
-				    priorityIncreased = 0;
+            // Reduce priority if previously increased
+            else if(rxData.DataValue == DATA_VALUE_REDUCE){
+                if (priorityIncreased != 0U){
+                    vTaskPrioritySet(NULL, originalPriority - PRIORITY_REDUCE_DELTA);
+                    priorityIncreased = 0U;
 				}
 			}
-			//Delete Example Task 2
-			else if(rxData.DataValue == 2){
+            // Delete Example Task 2
+            else if(rxData.DataValue == DATA_VALUE_DELETE){
 				vTaskDelete(NULL);
 			}
 

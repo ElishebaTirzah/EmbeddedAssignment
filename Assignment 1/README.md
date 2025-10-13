@@ -32,3 +32,7 @@ Behavior notes:
 - On `DataValue = 2`, `ExampleTask2` calls `vTaskDelete(NULL)` and stops printing thereafter.
 
 
+#### Assignment 1 Preview
+
+![Embedded Assignment Overview](Assignment%201/EmbeddedAssignment.jpeg)
+
