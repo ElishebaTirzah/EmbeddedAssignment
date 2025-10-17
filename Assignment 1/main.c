@@ -43,6 +43,13 @@ typedef struct {
 /* USER CODE BEGIN PV */
 static TaskHandle_t TaskHandle_1;
 static TaskHandle_t TaskHandle_2;
+
+/* Global variables for data structure population */
+uint8_t G_DataID = 1U;
+int32_t G_DataValue = 0;
+
+/* Counter for updating G_DataValue */
+static uint32_t g_update_counter = 0U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -56,7 +63,7 @@ void SystemClock_Config(void);
 static void ExampleTask1(void *pV);
 static void ExampleTask2(void *pV);
 static QueueHandle_t Queue1;
- 
+
 /* USER CODE END 0 */
 
 /**
@@ -169,20 +176,25 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 static void ExampleTask1(void *pV){
     Data_t myData;
-    int32_t counter = 0;
-	myData.dataID = 1;
-	while(1){
-		myData.DataValue = counter++;
+    TickType_t xLastWakeTime;
+    const TickType_t xFrequency = pdMS_TO_TICKS(PRODUCER_DELAY_MS);
 
-        // Sending to queue
+    /* Initialize the last wake time for precise timing */
+    xLastWakeTime = xTaskGetTickCount();
+
+    while(1){
+        /* Populate structure from global variables */
+        myData.dataID = G_DataID;
+        myData.DataValue = G_DataValue;
+
+        /* Send to queue */
         if (xQueueSend(Queue1, &myData, portMAX_DELAY) != pdPASS) {
             printf("[ERROR]: Sending failed");
         }
-        vTaskDelay(pdMS_TO_TICKS(PRODUCER_DELAY_MS));
-        if (counter == COUNTER_MAX_EXCLUSIVE){
-			counter = 0;
-		}
-	}
+        
+        /* Wait for exactly 500ms using vTaskDelayUntil for precise timing */
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
 }
 
 static void ExampleTask2(void *pV){
@@ -215,7 +227,7 @@ static void ExampleTask2(void *pV){
 			}
             // Delete Example Task 2
             else if(rxData.DataValue == DATA_VALUE_DELETE){
-				vTaskDelete(NULL);
+			        	vTaskDelete(NULL);
 			}
 
         }
@@ -239,6 +251,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   if (htim->Instance == TIM6)
   {
     HAL_IncTick();
+    
+    /* Update G_DataValue every 100ms (assuming 1ms tick) */
+    g_update_counter++;
+    if (g_update_counter >= 100U) {
+      g_update_counter = 0U;
+      G_DataValue++;
+      if (G_DataValue >= COUNTER_MAX_EXCLUSIVE) {
+        G_DataValue = 0;
+      }
+    }
   }
   /* USER CODE BEGIN Callback 1 */
 
